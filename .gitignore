@@ -1,0 +1,20 @@
+# ================= ESP-IDF 编译与配置产物 =================
+build/
+managed_components/
+sdkconfig
+sdkconfig.old
+
+# ================= Python 上位机脚本缓存 =================
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+venv/
+*.egg-info/
+
+# ================= 操作系统与编辑器临时文件 =================
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
