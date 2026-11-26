@@ -1,81 +1,77 @@
-| Supported Targets | ESP32-P4 | ESP32-S2 | ESP32-S3 |
-| ----------------- | -------- | -------- | -------- |
+# ESP32-S3 Wireless DAPLink
 
-# TinyUSB Composite Device (MSC + Serial) Example
+An ESP32-S3-based wired and wireless CMSIS-DAP debugger built with **ESP-IDF v5.5** and TinyUSB. It enumerates as a multi-interface USB composite device for local debugging and configuration, while offering Wi-Fi wireless debugging via the ELP (elaphureLink) protocol and an embedded web management interface.
 
-(See the README.md file in the upper level 'examples' directory for more information about examples.)
+## Features
 
-A USB device can provide multiple functions that are active simultaneously. Such multi-function devices are also known as composite devices. This example shows how to set up ESP chip to work as a USB Serial Device as well as MSC device (Storage media as SPI-Flash).
+- **USB Composite Device (Plug & Play)**:
+  - **CMSIS-DAP v2 (WinUSB)**: Driverless high-speed SWD debugging on Windows 10/11, Linux, and macOS (compatible with Keil MDK, OpenOCD, and pyOCD).
+  - **USB CDC Serial Port**: Transparent USB-to-UART bridge for target serial communication.
+  - **USB Mass Storage (MSC)**: Mounts as a USB flash drive containing `wifi.txt` for easy Wi-Fi SSID and password configuration without recompiling firmware.
+- **Wireless Debugging (Wi-Fi + mDNS)**:
+  - Automatically resolves via mDNS at `dap.local`.
+  - Works seamlessly with the included `pyocd_elp.py` bridge script for wireless flashing, register inspection, and interactive debugging over TCP.
+- **Embedded Web Console (`http://dap.local/`)**:
+  - **Web Serial Terminal**: View and interact with live target UART passthrough logs directly in your browser.
+  - **Log Management**: Download recorded UART passthrough log files stored on the device.
+  - **Web OTA Updates**: Upload `.bin` firmware images to upgrade the ESP32-S3 debugger over Wi-Fi.
 
-As a USB stack, a TinyUSB component is used.
+## Hardware Pinout
 
-## How to use example
+Connect your ESP32-S3 board to the target MCU using the following GPIO assignments:
 
-### Hardware Required
+| Function | Signal | ESP32-S3 Pin | Description |
+| :--- | :--- | :--- | :--- |
+| **SWD** | `SWCLK` | `GPIO 1` | Serial Wire Clock |
+| **SWD** | `SWDIO` | `GPIO 2` | Serial Wire Data Input/Output |
+| **SWD** | `nRESET` | `GPIO 3` | Target Hardware Reset (Active Low) |
+| **UART** | `TXD` | `GPIO 17` | UART Transmit (connect to Target RX) |
+| **UART** | `RXD` | `GPIO 18` | UART Receive (connect to Target TX) |
 
-Any ESP board that supports the USB-OTG peripheral.
+> **Note**: Ensure both the ESP32-S3 and the target board share a common `GND` and operate at compatible 3.3V logic levels.
 
-### Pin Assignment
+## Quick Start
 
-_Note:_ In case your board doesn't have micro-USB connector connected to USB-OTG peripheral, you may have to DIY a cable and connect **D+** and **D-** to the pins listed below.
-
-See common pin assignments for USB Device examples from [upper level](../../README.md#common-pin-assignments).
-
-Next, for Self-Powered Devices with VBUS monitoring, user must set ``self_powered`` to ``true`` and ``vbus_monitor_io`` to GPIO number (``VBUS_MONITORING_GPIO_NUM``) that will be used for VBUS monitoring.
-
-### Build and Flash
-
-Build the project and flash it to the board, then run monitor tool to view serial output:
+### 1. Build & Flash Firmware
+Ensure you have **ESP-IDF v5.5** installed and activated in your environment:
 
 ```bash
-idf.py -p PORT flash monitor
+idf.py set-target esp32s3
+idf.py build
+idf.py -p /dev/ttyACM0 flash monitor
 ```
 
-(Replace PORT with the name of the serial port to use.)
+### 2. USB Mode & Wi-Fi Configuration
+1. Plug the ESP32-S3 native USB port into your PC.
+2. Three interfaces will appear automatically:
+   - A **CMSIS-DAP** debug probe ready for wired debugging.
+   - A **USB Serial (CDC)** COM port for UART passthrough.
+   - A **USB Mass Storage** drive.
+3. Open the mounted USB drive, edit `wifi.txt` with your Wi-Fi **SSID** and **Password**, save the file, and reset the ESP32-S3.
 
-(To exit the serial monitor, type ``Ctrl-]``.)
-
-See the Getting Started Guide for full steps to configure and use ESP-IDF to build projects.
-
-## Example Output
-
-After the flashing you should see the output at idf monitor:
-
+### 3. Web Console (`http://dap.local/`)
+Once connected to your Wi-Fi network, open a browser and navigate to:
+```text
+[http://dap.local/](http://dap.local/)
 ```
-I (344) main_task: Calling app_main()
-I (344) example_main: USB Composite initialization
-W (354) TinyUSB: The device's configuration descriptor is not provided by user, using default.
-W (364) TinyUSB: The device's string descriptor is not provided by user, using default.
-W (374) TinyUSB: The device's device descriptor is not provided by user, using default.
-I (384) tusb_desc:
-┌─────────────────────────────────┐
-│  USB Device Descriptor Summary  │
-├───────────────────┬─────────────┤
-│bDeviceClass       │ 239         │
-├───────────────────┼─────────────┤
-│bDeviceSubClass    │ 2           │
-├───────────────────┼─────────────┤
-│bDeviceProtocol    │ 1           │
-├───────────────────┼─────────────┤
-│bMaxPacketSize0    │ 64          │
-├───────────────────┼─────────────┤
-│idVendor           │ 0x303a      │
-├───────────────────┼─────────────┤
-│idProduct          │ 0x4001      │
-├───────────────────┼─────────────┤
-│bcdDevice          │ 0x100       │
-├───────────────────┼─────────────┤
-│iManufacturer      │ 0x1         │
-├───────────────────┼─────────────┤
-│iProduct           │ 0x2         │
-├───────────────────┼─────────────┤
-│iSerialNumber      │ 0x3         │
-├───────────────────┼─────────────┤
-│bNumConfigurations │ 0x1         │
-└───────────────────┴─────────────┘
-I (544) TinyUSB: TinyUSB Driver installed
-I (554) example_main: Initializing storage...
-I (554) example_main: Initializing wear levelling
-I (584) example_main: USB Composite initialization DONE
-I (584) main_task: Returned from app_main()
-```
+From the web interface, you can:
+- Monitor live UART serial output in the web terminal.
+- Download saved UART log files.
+- Perform wireless OTA firmware updates.
+
+### 4. Wireless Debugging with pyOCD
+This repository includes `pyocd_elp.py` to bridge wireless ELP probes with `pyocd`.
+
+1. Install `pyocd` on your host machine:
+   ```bash
+   pip install pyocd
+   ```
+2. Launch an interactive pyOCD commander session over Wi-Fi (example using a Nations Tech `N32G452CCL7` target):
+   ```bash
+   python ./pyocd_elp.py commander -u ELP-dap.local --pack ./Nations.N32G45x_DFP.1.3.0.pack -t n32g452ccl7 -f 2000000
+   ```
+   *(Replace the `--pack` path, `-t` target name, and `-f` SWD clock frequency to match your target MCU.)*
+
+## License
+
+This project is open-source. See the `LICENSE` file for details.
